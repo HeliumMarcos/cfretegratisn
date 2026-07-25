@@ -1,0 +1,9 @@
+{
+  "name": "scraper-natura",
+  "version": "1.0.0",
+  "main": "api/frete.js",
+  "dependencies": {
+    "puppeteer-core": "^22.0.0",
+    "@sparticuz/chromium": "^123.0.0"
+  }
+}
