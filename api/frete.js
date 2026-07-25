@@ -9,7 +9,7 @@ export default async function handler(req, res) {
         browser = await puppeteer.connect({
             browserWSEndpoint: 'wss://chrome.browserless.io?token=2Ux9B22vueQgoFx1aeb6ba3810f2ee90cfb06f8d5ae127f48'
         });
-
+        
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
@@ -28,11 +28,8 @@ export default async function handler(req, res) {
         const match = textoLimpo.match(regex);
 
         if (match) {
-            let valorFinal = match[1];
-            if (!valorFinal.includes(',')) {
-                valorFinal += ",00";
-            }
-            res.status(200).send(valorFinal);
+            // Retorna estritamente o valor capturado (ex: 99 ou 99,00) sem manipulação
+            res.status(200).send(match[1]);
         } else {
             res.status(200).send("FALHA_REGEX: O padrão falhou. Texto lido: " + textoLimpo);
         }
