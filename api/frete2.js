@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
     try {
         browser = await puppeteer.connect({
-            browserWSEndpoint: 'wss://chrome.browserless.io?token=SUA_CHAVE_AQUI' // Mantenha sua chave real aqui
+            browserWSEndpoint: 'wss://chrome.browserless.io?token=2Ux9B22vueQgoFx1aeb6ba3810f2ee90cfb06f8d5ae127f48' // Mantenha sua chave real aqui
         });
 
         const page = await browser.newPage();
