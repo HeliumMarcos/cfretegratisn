@@ -23,12 +23,13 @@ Quando o padrão não é encontrado, a resposta ainda é `200`, com o motivo no 
 |---|---|---|
 | `BROWSERLESS_TOKEN` | sim | — |
 | `BROWSERLESS_URL` | não | `https://chrome.browserless.io` |
-| `BROWSERLESS_API_VERSION` | não | `v1` |
+| `BROWSERLESS_API_VERSION` | não | `v2` |
 | `NATURA_STORE_URL` | não | vitrine de promoções do consultor `helium` |
 
-`BROWSERLESS_API_VERSION` existe porque o host legado espera `waitFor` no corpo da
-requisição, enquanto os hosts regionais mais novos esperam `waitForSelector`. Ao migrar para
-um host regional, defina `BROWSERLESS_URL` **e** `BROWSERLESS_API_VERSION=v2` juntos.
+`BROWSERLESS_API_VERSION` existe porque a v2 espera `waitForSelector` no corpo da requisição,
+enquanto a v1 esperava `waitFor`. Cada uma rejeita a chave da outra com
+`400 ... must NOT have additional properties`, então é esse o sintoma de versão trocada.
+Se algum dia cair numa instância v1, basta definir `BROWSERLESS_API_VERSION=v1`.
 
 ## Rodando local
 
