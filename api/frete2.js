@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
     try {
-        const textos = await buscarTextosBoxInfo();
+        const { textos } = await buscarTextosBoxInfo();
         const resultados = extrairLista(textos);
 
         if (resultados.length > 0) {
