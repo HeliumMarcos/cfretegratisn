@@ -11,8 +11,14 @@ A leitura da página é feita pela API REST `/scrape` do Browserless — não h�
 |---|---|
 | `GET /api/frete` | Só o valor do primeiro banner (ex.: `99` ou `99,00`) |
 | `GET /api/frete2` | Uma linha por faixa: `Frete Grátis de "Natura" : 99`, separadas por `\n` |
+| `GET /` | Página de status em HTML (o mesmo que `/api/status`) |
 
-Ambas respondem `text/plain; charset=utf-8`.
+As duas primeiras respondem `text/plain; charset=utf-8`.
+
+A página inicial faz uma consulta real ao site a cada acesso e mostra um de três estados:
+**FUNCIONANDO**, **ATENÇÃO** (conectou mas não achou frete — promoção fora do ar ou layout
+mudado) e **FORA DO AR** (falha de infraestrutura, com o motivo). Ela responde HTTP `503`
+nesse último caso, então serve como endpoint de monitoramento de uptime.
 
 Quando o padrão não é encontrado, a resposta ainda é `200`, com o motivo no corpo
 (`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve `500 ERRO_TECNICO: ...`.
@@ -23,12 +29,13 @@ Quando o padrão não é encontrado, a resposta ainda é `200`, com o motivo no 
 |---|---|---|
 | `BROWSERLESS_TOKEN` | sim | — |
 | `BROWSERLESS_URL` | não | `https://chrome.browserless.io` |
-| `BROWSERLESS_API_VERSION` | não | `v1` |
+| `BROWSERLESS_API_VERSION` | não | `v2` |
 | `NATURA_STORE_URL` | não | vitrine de promoções do consultor `helium` |
 
-`BROWSERLESS_API_VERSION` existe porque o host legado espera `waitFor` no corpo da
-requisição, enquanto os hosts regionais mais novos esperam `waitForSelector`. Ao migrar para
-um host regional, defina `BROWSERLESS_URL` **e** `BROWSERLESS_API_VERSION=v2` juntos.
+`BROWSERLESS_API_VERSION` existe porque a v2 espera `waitForSelector` no corpo da requisição,
+enquanto a v1 esperava `waitFor`. Cada uma rejeita a chave da outra com
+`400 ... must NOT have additional properties`, então é esse o sintoma de versão trocada.
+Se algum dia cair numa instância v1, basta definir `BROWSERLESS_API_VERSION=v1`.
 
 ## Rodando local
 
