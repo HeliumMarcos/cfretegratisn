@@ -1,4 +1,4 @@
-import { buscarTextosBoxInfo, extrairValor, extrairLista } from '../lib/natura.js';
+import { buscarTextosBoxInfo, extrairValor, extrairLista, FAST_PADRAO } from '../lib/natura.js';
 
 function esc(texto) {
     return String(texto)
@@ -12,20 +12,32 @@ function linhaTabela(rotulo, valor) {
     return `<tr><th>${esc(rotulo)}</th><td>${esc(valor)}</td></tr>`;
 }
 
+// Aceita ?fast=1 e ?fast=0 para comparar os dois modos no mesmo deploy.
+function lerFast(req) {
+    const bruto = req?.query?.fast
+        ?? new URL(req?.url ?? '/', 'http://local').searchParams.get('fast');
+
+    if (bruto === '1') return true;
+    if (bruto === '0') return false;
+    return FAST_PADRAO;
+}
+
 export default async function handler(req, res) {
     const inicio = Date.now();
 
     const temToken = Boolean(process.env.BROWSERLESS_TOKEN);
     const host = process.env.BROWSERLESS_URL ?? 'https://chrome.browserless.io';
     const versao = process.env.BROWSERLESS_API_VERSION ?? 'v2';
+    const fast = lerFast(req);
 
     let erro = null;
     let textos = [];
     let valor = null;
     let linhas = [];
+    let fastAplicado = false;
 
     try {
-        textos = await buscarTextosBoxInfo();
+        ({ textos, fastAplicado } = await buscarTextosBoxInfo({ fast }));
         valor = extrairValor(textos).valor;
         linhas = extrairLista(textos);
     } catch (e) {
@@ -33,6 +45,15 @@ export default async function handler(req, res) {
     }
 
     const ms = Date.now() - inicio;
+
+    let modo;
+    if (!fast) {
+        modo = 'normal (carrega tudo)';
+    } else if (fastAplicado) {
+        modo = 'rápido — imagens, fontes e mídia bloqueadas';
+    } else {
+        modo = 'rápido recusado pelo servidor, usou o normal';
+    }
     const achouAlgo = valor !== null || linhas.length > 0;
 
     // Tres estados: erro de infra, conectou mas nao achou frete, e tudo certo.
@@ -56,6 +77,7 @@ export default async function handler(req, res) {
         linhaTabela('Token', temToken ? 'configurado' : 'AUSENTE — defina BROWSERLESS_TOKEN'),
         linhaTabela('Host', host),
         linhaTabela('Formato da API', versao),
+        linhaTabela('Modo', modo),
         linhaTabela('Blocos lidos', textos.length),
         linhaTabela('Tempo de resposta', `${ms} ms`),
         linhaTabela('Verificado em', new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })),
@@ -110,6 +132,12 @@ export default async function handler(req, res) {
   pre { margin:0; padding:12px 14px; background:var(--bg); border:1px solid var(--linha);
         border-radius:8px; font-size:.88rem; white-space:pre-wrap; overflow-wrap:anywhere; }
   .vazio { margin:0; color:var(--fraco); font-style:italic; font-size:.9rem; }
+  .ajuda { margin:0 0 12px; color:var(--fraco); font-size:.89rem; }
+  .comparar { display:flex; gap:10px; }
+  .comparar a { flex:1; text-align:center; padding:12px 8px; border-radius:9px;
+                border:1px solid var(--linha); text-decoration:none; font-weight:600;
+                font-size:.95rem; color:var(--fraco); }
+  .comparar a.atual { border-color:var(--bom); color:var(--bom); }
   code { font-size:.88rem; }
   footer { color:var(--fraco); font-size:.83rem; text-align:center; margin-top:20px; }
   a { color:inherit; }
@@ -136,6 +164,16 @@ export default async function handler(req, res) {
   <section>
     <h2>Diagnóstico</h2>
     <table>${infos}</table>
+  </section>
+
+  <section>
+    <h2>Comparar velocidade</h2>
+    <p class="ajuda">Abra os dois e compare o <strong>tempo de resposta</strong>. Varie algumas
+    vezes: a primeira medição costuma ser a mais lenta.</p>
+    <nav class="comparar">
+      <a href="/?fast=0" class="${fast ? '' : 'atual'}">Normal</a>
+      <a href="/?fast=1" class="${fast ? 'atual' : ''}">Rápido</a>
+    </nav>
   </section>
 
   <footer>Esta página consulta o site da Natura ao vivo a cada acesso.</footer>
