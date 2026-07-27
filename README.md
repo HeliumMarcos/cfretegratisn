@@ -11,8 +11,14 @@ A leitura da página é feita pela API REST `/scrape` do Browserless — não h�
 |---|---|
 | `GET /api/frete` | Só o valor do primeiro banner (ex.: `99` ou `99,00`) |
 | `GET /api/frete2` | Uma linha por faixa: `Frete Grátis de "Natura" : 99`, separadas por `\n` |
+| `GET /` | Página de status em HTML (o mesmo que `/api/status`) |
 
-Ambas respondem `text/plain; charset=utf-8`.
+As duas primeiras respondem `text/plain; charset=utf-8`.
+
+A página inicial faz uma consulta real ao site a cada acesso e mostra um de três estados:
+**FUNCIONANDO**, **ATENÇÃO** (conectou mas não achou frete — promoção fora do ar ou layout
+mudado) e **FORA DO AR** (falha de infraestrutura, com o motivo). Ela responde HTTP `503`
+nesse último caso, então serve como endpoint de monitoramento de uptime.
 
 Quando o padrão não é encontrado, a resposta ainda é `200`, com o motivo no corpo
 (`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve `500 ERRO_TECNICO: ...`.
