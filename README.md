@@ -28,41 +28,56 @@ a infraestrutura ou a promoção em si.
 
 ## De onde vem o valor
 
-A fonte preferida é a **página de produto**, que tem um campo dedicado ao limiar:
+Três fontes, em ordem, e a página de status diz qual respondeu (**Lido de**):
 
-```html
-<h2 aria-label="frete grátis a partir de 149 Reais">frete grátis a partir de R$&nbsp;149,00</h2>
+1. **Vitrine por `GET` simples** (`http-direto`) — o anúncio das faixas está no HTML do
+   servidor. Responde em milissegundos, sem cota e sem fila.
+2. **Páginas de produto** (`página de produto`) — têm um campo dedicado ao limiar. Três
+   URLs tentadas em ordem, porque um produto pode sair do ar (`NATURA_PRODUTO_URLS`).
+3. **Browserless** — último recurso, quando nenhuma das anteriores serve.
+
+### Por que os padrões são ancorados na frase inteira
+
+A vitrine é uma **listagem cheia de preços**, e o HTML embute outro HTML dentro de JSON.
+Desescapar as aspas quebra a estrutura das tags, e qualquer remoção de tags depois disso
+corta no lugar errado, deixando restos de classe CSS no meio do texto:
+
+```
+Minha Loja - promocoes *]:!opacity-0 text-transparent w-32 h-8 rounded-3xl"> ... entrar 0
 ```
 
-Isso importa porque a vitrine de promoções é uma **listagem cheia de preços**: ali,
-"frete grátis Natura" pode cair perto do `R$` de um produto qualquer, e foi assim que a
-rota chegou a devolver `9,00`. A frase **"a partir de"** só existe no campo do limiar, e é
-ela que torna a leitura inequívoca.
+Sobre essa sopa, um padrão genérico (`frete grátis` … `R$`) casa com o preço de qualquer
+coisa — foi assim que a rota chegou a devolver **`9,00`**, que era o preço de outro item.
+Valor errado em silêncio é pior que falha: a página no HostGator publicaria um limiar
+inexistente.
 
-A mesma página tem duas armadilhas que o padrão precisa evitar: um selo "frete grátis"
-solto e o preço do produto (`R$ 279,90`) logo depois. Ancorar na frase resolve as duas.
-O `aria-label` é lido primeiro por já vir sem centavos.
+A defesa é não limpar o HTML e exigir a frase completa. **"acima de"** e **"a partir de"**
+só aparecem no anúncio do limiar, então o padrão acerta sem depender de HTML bem-formado:
 
-São três URLs de produto, tentadas em ordem, porque um produto pode sair do ar
-(`NATURA_PRODUTO_URLS` sobrescreve, separadas por vírgula).
+| Fonte | Frase exigida |
+|---|---|
+| vitrine | `frete grátis Natura acima de R$ …` |
+| produto | `frete grátis a partir de R$ …` |
 
-A **vitrine** continua sendo lida, porque é a única que tem a *lista* de faixas, uma por
-marca — é o que alimenta `/api/frete2`. Ela é lida primeiro por um `GET` simples, sem
-browser, e só cai no Browserless se isso não servir. `/api/frete` não precisa da lista,
-então para na página de produto e nem toca no resto.
+Na página de produto isso também evita duas armadilhas próximas: um selo "frete grátis"
+solto e o preço do produto (`R$ 279,90`) logo depois.
 
-A página de status diz qual fonte respondeu, em **Lido de**: `página de produto`,
-`http-direto` ou o seletor CSS que casou.
+Os padrões mais soltos continuam existindo, mas **só** sobre o texto que o Browserless
+extrai de elementos específicos — ali o texto já vem limpo, e a ambiguidade não existe.
 
 `149,00` e `149` são o mesmo limiar, então o valor é normalizado: sem isso a rota
 devolveria um ou outro conforme a fonte que respondeu, mudando sozinha de um acesso para
 o outro. Valores quebrados (`79,90`) ficam como estão.
 
+Quando nenhuma fonte responde **e** houve falha de infraestrutura, a resposta é erro, não
+"promoção fora do ar" — e traz o motivo de cada uma das três, que apontam para lugares
+diferentes (bloqueio do site, produto sem o campo, cota do Browserless).
+
 Uma limitação vale registrar: se o site passar a barrar por **impressão digital de TLS**
-(JA3), a via direta cai. O `fetch` do Node usa a stack TLS dele, e não há como imitar a de
-um Chrome — é o que bibliotecas como `curl_cffi` fazem com `impersonate`, e não existe
-equivalente no runtime da Vercel. Cabeçalhos de navegador ajudam com checagem simples, não
-com essa. Nesse caso a via direta falha e o Browserless assume, como antes.
+(JA3), as leituras diretas caem. O `fetch` do Node usa a stack TLS dele, e não há como
+imitar a de um Chrome — é o que bibliotecas como `curl_cffi` fazem com `impersonate`, e
+não existe equivalente no runtime da Vercel. Cabeçalhos de navegador ajudam com checagem
+simples, não com essa.
 
 ## Por que não depende de um seletor só
 
