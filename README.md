@@ -25,6 +25,22 @@ quantas tentativas foram necessárias e uma amostra do **texto lido**. Quando al
 funcionar de novo, esses quatro campos dizem se o problema é a marcação do site, a espera,
 a infraestrutura ou a promoção em si.
 
+## Duas vias de leitura
+
+O texto do banner vem embutido no HTML da vitrine, dentro do JSON que hidrata a página.
+Então, antes de qualquer browser, a leitura tenta um `GET` simples e extrai dali. Quando
+funciona, responde em milissegundos, não gasta cota e não entra em fila.
+
+O Browserless continua como segunda via, para quando a leitura direta não serve — e a
+página de status diz qual das duas foi usada, em **Lido de**: `http-direto` ou o seletor
+CSS que casou.
+
+Uma limitação vale registrar: se o site passar a barrar por **impressão digital de TLS**
+(JA3), a via direta cai. O `fetch` do Node usa a stack TLS dele, e não há como imitar a de
+um Chrome — é o que bibliotecas como `curl_cffi` fazem com `impersonate`, e não existe
+equivalente no runtime da Vercel. Cabeçalhos de navegador ajudam com checagem simples, não
+com essa. Nesse caso a via direta falha e o Browserless assume, como antes.
+
 ## Por que não depende de um seletor só
 
 A leitura já quebrou uma vez porque o site parou de usar `[data-testid="box-info"]`: o
@@ -55,10 +71,15 @@ números:
 
 | Limite | Valor | Para quê |
 |---|---|---|
+| leitura direta | 6s | o `GET` sem browser |
 | `gotoOptions.timeout` | 10s | navegação, contada pelo Browserless |
 | `waitForSelector` | 4s | espera do bloco, contada pelo Browserless |
 | timeout da requisição | 20s | corte nosso, com folga sobre os 14s acima |
 | limite da função | 24s | margem sob os 30s da Vercel |
+
+O orçamento de 24s é **compartilhado**: o relógio começa antes da leitura direta, e cada
+requisição ao Browserless recebe o menor entre o seu timeout e o tempo que sobrou. Sem esse
+teto móvel as duas etapas somariam 26s e voltariam a estourar o limite da Vercel.
 
 O `fetch` não tem timeout próprio: se o Browserless enfileira a requisição esperando um
 worker livre, a função fica pendurada até a Vercel matá-la. Daí o corte de 20s, com folga
