@@ -45,8 +45,34 @@ espera inteira num seletor que sabidamente não existe mais.
 
 Esperar por um seletor que sumiu é justamente o que derruba a leitura, então, se a espera
 falhar, a requisição é repetida com uma espera de tempo fixo, que deixa o JavaScript da loja
-renderizar sem depender de marcação. Há um orçamento de tempo para o conjunto de tentativas
-não estourar o limite de 30s da função.
+renderizar sem depender de marcação.
+
+## Tempo e repetição
+
+O `vercel.json` corta a função em 30s, e estourar isso devolve um `504` cru da Vercel — que
+não diz o motivo e não aparece na página de status. Evitar esse `504` é o que dita os
+números:
+
+| Limite | Valor | Para quê |
+|---|---|---|
+| `gotoOptions.timeout` | 10s | navegação, contada pelo Browserless |
+| `waitForSelector` | 4s | espera do bloco, contada pelo Browserless |
+| timeout da requisição | 20s | corte nosso, com folga sobre os 14s acima |
+| limite da função | 24s | margem sob os 30s da Vercel |
+
+O `fetch` não tem timeout próprio: se o Browserless enfileira a requisição esperando um
+worker livre, a função fica pendurada até a Vercel matá-la. Daí o corte de 20s, com folga
+sobre a soma dos outros dois — o relógio deles só começa depois que a sessão do browser
+sobe, então encostar na soma aborta leituras que estavam a caminho.
+
+A combinação dos dois últimos faz a segunda tentativa acontecer **só quando a primeira
+falhou rápido**, que é o único caso em que repetir resolve: o servidor recusando alguma
+chave do corpo. Esperar numa fila e depois esperar de novo não resolve nada.
+
+Pela mesma razão, `401`, `402`, `403` e `429` param na primeira resposta: limite de taxa e
+credencial não melhoram com insistência, e repetir só queima mais cota. Um `429` aparece
+como "cota do plano esgotada ou requisições demais ao mesmo tempo", não como a página HTML
+do openresty.
 
 Uma página que carrega e volta **sem texto algum**, nem no `body`, é tratada como erro de
 infraestrutura (provável bloqueio de bot ou `NATURA_STORE_URL` inválida), não como
