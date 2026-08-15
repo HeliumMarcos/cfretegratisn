@@ -4,6 +4,7 @@ import {
     extrairLista,
     amostraTexto,
     SELETOR_ESPERA,
+    FONTE_DIRETA,
     FAST_PADRAO
 } from '../lib/natura.js';
 
@@ -58,7 +59,9 @@ export default async function handler(req, res) {
     const ms = Date.now() - inicio;
 
     let modo;
-    if (!fast) {
+    if (seletor === FONTE_DIRETA) {
+        modo = 'leitura direta, sem browser';
+    } else if (!fast) {
         modo = 'normal (carrega tudo)';
     } else if (fastAplicado) {
         modo = 'rápido — imagens, fontes e mídia bloqueadas';
