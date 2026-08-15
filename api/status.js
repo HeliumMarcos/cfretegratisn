@@ -46,11 +46,12 @@ export default async function handler(req, res) {
     let fonte = null;
     let detalheFonte = null;
     let motivoProduto = null;
+    let amostra = null;
     let esperaAplicada = null;
     let tentativas = 0;
 
     try {
-        ({ textos, valor, linhas, fonte, detalheFonte, motivoProduto,
+        ({ textos, valor, linhas, fonte, detalheFonte, motivoProduto, amostra,
             fastAplicado, seletor, esperaAplicada, tentativas } = await lerFrete({ fast }));
     } catch (e) {
         erro = e.message;
@@ -116,8 +117,11 @@ export default async function handler(req, res) {
         linhaTabela('Verificado em', new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })),
     ].join('');
 
-    const textoLido = textos.length > 0
-        ? `<pre>${esc(amostraTexto(textos))}</pre>`
+    // A amostra vem em volta da menção a frete no HTML, que diz muito mais que os
+    // primeiros caracteres da página — foi o que faltava para diagnosticar o 9,00.
+    const lido = amostra ?? (textos.length > 0 ? amostraTexto(textos) : null);
+    const textoLido = lido
+        ? `<pre>${esc(lido)}</pre>`
         : '<p class="vazio">nada foi lido</p>';
 
     const amostraFrete = valor !== null
