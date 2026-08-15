@@ -1,10 +1,9 @@
 import {
-    buscarTextosBoxInfo,
-    extrairValor,
-    extrairLista,
+    lerFrete,
     amostraTexto,
     SELETOR_ESPERA,
     FONTE_DIRETA,
+    FONTE_PRODUTO,
     FAST_PADRAO
 } from '../lib/natura.js';
 
@@ -44,14 +43,15 @@ export default async function handler(req, res) {
     let linhas = [];
     let fastAplicado = false;
     let seletor = null;
+    let fonte = null;
+    let detalheFonte = null;
+    let motivoProduto = null;
     let esperaAplicada = null;
     let tentativas = 0;
 
     try {
-        ({ textos, fastAplicado, seletor, esperaAplicada, tentativas } =
-            await buscarTextosBoxInfo({ fast }));
-        valor = extrairValor(textos).valor;
-        linhas = extrairLista(textos);
+        ({ textos, valor, linhas, fonte, detalheFonte, motivoProduto,
+            fastAplicado, seletor, esperaAplicada, tentativas } = await lerFrete({ fast }));
     } catch (e) {
         erro = e.message;
     }
@@ -59,7 +59,9 @@ export default async function handler(req, res) {
     const ms = Date.now() - inicio;
 
     let modo;
-    if (seletor === FONTE_DIRETA) {
+    if (fonte === FONTE_PRODUTO) {
+        modo = 'campo dedicado da página de produto';
+    } else if (seletor === FONTE_DIRETA) {
         modo = 'leitura direta, sem browser';
     } else if (!fast) {
         modo = 'normal (carrega tudo)';
@@ -79,7 +81,7 @@ export default async function handler(req, res) {
     } else if (!achouAlgo) {
         estado = 'atencao';
         rotulo = 'ATENÇÃO';
-        detalhe = `Conectou e leu ${textos.length} bloco(s) via ${seletor}, mas nenhum tinha `
+        detalhe = `Conectou e leu ${textos.length} bloco(s) via ${fonte ?? 'nenhuma fonte'}, mas nenhum tinha `
             + 'frete grátis. Como a leitura já cai no texto da página inteira quando o bloco '
             + 'do banner some, o mais provável é que a promoção esteja fora do ar. Confira o '
             + 'texto lido abaixo.';
@@ -105,7 +107,8 @@ export default async function handler(req, res) {
         linhaTabela('Host', host),
         linhaTabela('Formato da API', versao),
         linhaTabela('Modo', modo),
-        linhaTabela('Lido de', seletor ?? '—'),
+        linhaTabela('Lido de', fonte ?? '—'),
+        linhaTabela('Produto', detalheFonte ?? motivoProduto ?? '—'),
         linhaTabela('Espera', espera),
         linhaTabela('Tentativas', tentativas || '—'),
         linhaTabela('Blocos lidos', textos.length),
