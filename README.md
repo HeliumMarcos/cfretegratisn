@@ -3,13 +3,14 @@
 Duas rotas serverless (Vercel) que leem o valor mínimo de frete grátis na vitrine da Natura
 e devolvem texto plano, pronto para ser consumido por uma página no HostGator.
 
-A leitura da página é feita pela API REST `/scrape` do Browserless — não há dependências npm.
+A leitura é feita por `GET` simples sempre que possível; a API REST `/scrape` do Browserless
+entra só como reserva. Não há dependências npm.
 
 ## Rotas
 
 | Rota | Retorno |
 |---|---|
-| `GET /api/frete` | Só o valor do primeiro banner (ex.: `149` ou `99,00`) |
+| `GET /api/frete` | Só o limiar do frete grátis (ex.: `149` ou `79,90`) |
 | `GET /api/frete2` | Uma linha por faixa: `Frete Grátis de "Natura" : 149`, separadas por `\n` |
 | `GET /` | Página de status em HTML (o mesmo que `/api/status`) |
 
@@ -25,15 +26,37 @@ quantas tentativas foram necessárias e uma amostra do **texto lido**. Quando al
 funcionar de novo, esses quatro campos dizem se o problema é a marcação do site, a espera,
 a infraestrutura ou a promoção em si.
 
-## Duas vias de leitura
+## De onde vem o valor
 
-O texto do banner vem embutido no HTML da vitrine, dentro do JSON que hidrata a página.
-Então, antes de qualquer browser, a leitura tenta um `GET` simples e extrai dali. Quando
-funciona, responde em milissegundos, não gasta cota e não entra em fila.
+A fonte preferida é a **página de produto**, que tem um campo dedicado ao limiar:
 
-O Browserless continua como segunda via, para quando a leitura direta não serve — e a
-página de status diz qual das duas foi usada, em **Lido de**: `http-direto` ou o seletor
-CSS que casou.
+```html
+<h2 aria-label="frete grátis a partir de 149 Reais">frete grátis a partir de R$&nbsp;149,00</h2>
+```
+
+Isso importa porque a vitrine de promoções é uma **listagem cheia de preços**: ali,
+"frete grátis Natura" pode cair perto do `R$` de um produto qualquer, e foi assim que a
+rota chegou a devolver `9,00`. A frase **"a partir de"** só existe no campo do limiar, e é
+ela que torna a leitura inequívoca.
+
+A mesma página tem duas armadilhas que o padrão precisa evitar: um selo "frete grátis"
+solto e o preço do produto (`R$ 279,90`) logo depois. Ancorar na frase resolve as duas.
+O `aria-label` é lido primeiro por já vir sem centavos.
+
+São três URLs de produto, tentadas em ordem, porque um produto pode sair do ar
+(`NATURA_PRODUTO_URLS` sobrescreve, separadas por vírgula).
+
+A **vitrine** continua sendo lida, porque é a única que tem a *lista* de faixas, uma por
+marca — é o que alimenta `/api/frete2`. Ela é lida primeiro por um `GET` simples, sem
+browser, e só cai no Browserless se isso não servir. `/api/frete` não precisa da lista,
+então para na página de produto e nem toca no resto.
+
+A página de status diz qual fonte respondeu, em **Lido de**: `página de produto`,
+`http-direto` ou o seletor CSS que casou.
+
+`149,00` e `149` são o mesmo limiar, então o valor é normalizado: sem isso a rota
+devolveria um ou outro conforme a fonte que respondeu, mudando sozinha de um acesso para
+o outro. Valores quebrados (`79,90`) ficam como estão.
 
 Uma limitação vale registrar: se o site passar a barrar por **impressão digital de TLS**
 (JA3), a via direta cai. O `fetch` do Node usa a stack TLS dele, e não há como imitar a de
@@ -71,7 +94,8 @@ números:
 
 | Limite | Valor | Para quê |
 |---|---|---|
-| leitura direta | 6s | o `GET` sem browser |
+| página de produto | 5s | por URL, para no primeiro que responder |
+| leitura direta | 6s | o `GET` da vitrine, sem browser |
 | `gotoOptions.timeout` | 10s | navegação, contada pelo Browserless |
 | `waitForSelector` | 4s | espera do bloco, contada pelo Browserless |
 | timeout da requisição | 20s | corte nosso, com folga sobre os 14s acima |
@@ -110,11 +134,12 @@ Quando o padrão não é encontrado, a resposta ainda é `200`, com o motivo no 
 
 | Variável | Obrigatória | Default |
 |---|---|---|
-| `BROWSERLESS_TOKEN` | sim | — |
+| `BROWSERLESS_TOKEN` | só para a reserva | — |
 | `BROWSERLESS_URL` | não | `https://chrome.browserless.io` |
 | `BROWSERLESS_API_VERSION` | não | `v2` |
 | `BROWSERLESS_FAST` | não | desligado (`1` liga) |
 | `NATURA_STORE_URL` | não | vitrine de promoções do consultor `helium` |
+| `NATURA_PRODUTO_URLS` | não | três páginas de produto, separadas por vírgula |
 
 ## Modo rápido
 

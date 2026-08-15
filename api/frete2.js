@@ -1,16 +1,15 @@
-import { buscarTextosBoxInfo, extrairLista } from '../lib/natura.js';
+import { lerFrete } from '../lib/natura.js';
 
 export default async function handler(req, res) {
     // Define a resposta como texto plano com suporte a quebras de linha reais
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
     try {
-        const { textos } = await buscarTextosBoxInfo();
-        const resultados = extrairLista(textos);
+        const { linhas } = await lerFrete({ precisaLista: true });
 
-        if (resultados.length > 0) {
+        if (linhas.length > 0) {
             // O uso de \n garante que o HostGator receba e exiba um por linha
-            res.status(200).send(resultados.join('\n'));
+            res.status(200).send(linhas.join('\n'));
         } else {
             res.status(200).send('FALHA: Nenhum padrão de frete localizado.');
         }
