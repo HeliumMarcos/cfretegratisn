@@ -3,7 +3,7 @@ import {
     extrairValor,
     extrairLista,
     amostraTexto,
-    SELETOR,
+    SELETOR_ESPERA,
     FAST_PADRAO
 } from '../lib/natura.js';
 
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
 
     let espera;
     if (esperaAplicada === 'seletor') {
-        espera = `esperou ${SELETOR}`;
+        espera = `esperou ${SELETOR_ESPERA}`;
     } else if (esperaAplicada === 'tempo') {
         espera = 'espera fixa — o bloco histórico não apareceu';
     } else if (esperaAplicada === 'nenhuma') {

@@ -9,8 +9,8 @@ A leitura da página é feita pela API REST `/scrape` do Browserless — não h�
 
 | Rota | Retorno |
 |---|---|
-| `GET /api/frete` | Só o valor do primeiro banner (ex.: `99` ou `99,00`) |
-| `GET /api/frete2` | Uma linha por faixa: `Frete Grátis de "Natura" : 99`, separadas por `\n` |
+| `GET /api/frete` | Só o valor do primeiro banner (ex.: `149` ou `99,00`) |
+| `GET /api/frete2` | Uma linha por faixa: `Frete Grátis de "Natura" : 149`, separadas por `\n` |
 | `GET /` | Página de status em HTML (o mesmo que `/api/status`) |
 
 As duas primeiras respondem `text/plain; charset=utf-8`.
@@ -30,10 +30,18 @@ a infraestrutura ou a promoção em si.
 A leitura já quebrou uma vez porque o site parou de usar `[data-testid="box-info"]`: o
 Browserless respondia `200`, mas com zero blocos, e as duas rotas devolviam falha.
 
+Hoje (15/08/2026) o banner é um **carrossel Swiper**, e cada faixa da promoção é um
+`.swiper-slide` — o equivalente exato dos antigos blocos `box-info`. Não há mais
+`data-testid` algum ali; "box info" só sobrevive dentro do `content_zone` dos links.
+
 Agora a mesma requisição pede vários seletores candidatos **e** o `body` da página, e a
 leitura fica com o primeiro que mencionar frete grátis. Pedir tudo de uma vez não custa
 requisição extra. O `body` não depende de marcação nenhuma, então sobrevive a qualquer
 redesign — é menos preciso, e por isso só entra quando os candidatos não trazem nada.
+
+A espera é por `[data-testid="box-info"], .swiper-slide` — uma lista CSS que cobre o bloco
+histórico, se um dia voltar, e o slide de hoje. Assim a primeira tentativa não gasta a
+espera inteira num seletor que sabidamente não existe mais.
 
 Esperar por um seletor que sumiu é justamente o que derruba a leitura, então, se a espera
 falhar, a requisição é repetida com uma espera de tempo fixo, que deixa o JavaScript da loja
