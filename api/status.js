@@ -1,4 +1,11 @@
-import { buscarTextosBoxInfo, extrairValor, extrairLista, FAST_PADRAO } from '../lib/natura.js';
+import {
+    buscarTextosBoxInfo,
+    extrairValor,
+    extrairLista,
+    amostraTexto,
+    SELETOR,
+    FAST_PADRAO
+} from '../lib/natura.js';
 
 function esc(texto) {
     return String(texto)
@@ -35,9 +42,13 @@ export default async function handler(req, res) {
     let valor = null;
     let linhas = [];
     let fastAplicado = false;
+    let seletor = null;
+    let esperaAplicada = null;
+    let tentativas = 0;
 
     try {
-        ({ textos, fastAplicado } = await buscarTextosBoxInfo({ fast }));
+        ({ textos, fastAplicado, seletor, esperaAplicada, tentativas } =
+            await buscarTextosBoxInfo({ fast }));
         valor = extrairValor(textos).valor;
         linhas = extrairLista(textos);
     } catch (e) {
@@ -65,12 +76,25 @@ export default async function handler(req, res) {
     } else if (!achouAlgo) {
         estado = 'atencao';
         rotulo = 'ATENÇÃO';
-        detalhe = `Conectou e leu ${textos.length} bloco(s), mas nenhum tinha frete grátis. `
-            + 'Pode ser a promoção que saiu do ar ou o layout do site que mudou.';
+        detalhe = `Conectou e leu ${textos.length} bloco(s) via ${seletor}, mas nenhum tinha `
+            + 'frete grátis. Como a leitura já cai no texto da página inteira quando o bloco '
+            + 'do banner some, o mais provável é que a promoção esteja fora do ar. Confira o '
+            + 'texto lido abaixo.';
     } else {
         estado = 'bom';
         rotulo = 'FUNCIONANDO';
         detalhe = 'As duas rotas estão respondendo com dados reais.';
+    }
+
+    let espera;
+    if (esperaAplicada === 'seletor') {
+        espera = `esperou ${SELETOR}`;
+    } else if (esperaAplicada === 'tempo') {
+        espera = 'espera fixa — o bloco histórico não apareceu';
+    } else if (esperaAplicada === 'nenhuma') {
+        espera = 'sem espera';
+    } else {
+        espera = '—';
     }
 
     const infos = [
@@ -78,10 +102,17 @@ export default async function handler(req, res) {
         linhaTabela('Host', host),
         linhaTabela('Formato da API', versao),
         linhaTabela('Modo', modo),
+        linhaTabela('Lido de', seletor ?? '—'),
+        linhaTabela('Espera', espera),
+        linhaTabela('Tentativas', tentativas || '—'),
         linhaTabela('Blocos lidos', textos.length),
         linhaTabela('Tempo de resposta', `${ms} ms`),
         linhaTabela('Verificado em', new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })),
     ].join('');
+
+    const textoLido = textos.length > 0
+        ? `<pre>${esc(amostraTexto(textos))}</pre>`
+        : '<p class="vazio">nada foi lido</p>';
 
     const amostraFrete = valor !== null
         ? `<pre>${esc(valor)}</pre>`
@@ -164,6 +195,8 @@ export default async function handler(req, res) {
   <section>
     <h2>Diagnóstico</h2>
     <table>${infos}</table>
+    <h2>Texto lido</h2>
+    ${textoLido}
   </section>
 
   <section>

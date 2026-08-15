@@ -16,9 +16,37 @@ A leitura da página é feita pela API REST `/scrape` do Browserless — não h�
 As duas primeiras respondem `text/plain; charset=utf-8`.
 
 A página inicial faz uma consulta real ao site a cada acesso e mostra um de três estados:
-**FUNCIONANDO**, **ATENÇÃO** (conectou mas não achou frete — promoção fora do ar ou layout
-mudado) e **FORA DO AR** (falha de infraestrutura, com o motivo). Ela responde HTTP `503`
+**FUNCIONANDO**, **ATENÇÃO** (conectou mas não achou frete — promoção fora do ar) e
+**FORA DO AR** (falha de infraestrutura, com o motivo). Ela responde HTTP `503`
 nesse último caso, então serve como endpoint de monitoramento de uptime.
+
+O diagnóstico mostra **de qual seletor** o texto veio, **como** a página foi esperada,
+quantas tentativas foram necessárias e uma amostra do **texto lido**. Quando algo parar de
+funcionar de novo, esses quatro campos dizem se o problema é a marcação do site, a espera,
+a infraestrutura ou a promoção em si.
+
+## Por que não depende de um seletor só
+
+A leitura já quebrou uma vez porque o site parou de usar `[data-testid="box-info"]`: o
+Browserless respondia `200`, mas com zero blocos, e as duas rotas devolviam falha.
+
+Agora a mesma requisição pede vários seletores candidatos **e** o `body` da página, e a
+leitura fica com o primeiro que mencionar frete grátis. Pedir tudo de uma vez não custa
+requisição extra. O `body` não depende de marcação nenhuma, então sobrevive a qualquer
+redesign — é menos preciso, e por isso só entra quando os candidatos não trazem nada.
+
+Esperar por um seletor que sumiu é justamente o que derruba a leitura, então, se a espera
+falhar, a requisição é repetida com uma espera de tempo fixo, que deixa o JavaScript da loja
+renderizar sem depender de marcação. Há um orçamento de tempo para o conjunto de tentativas
+não estourar o limite de 30s da função.
+
+Uma página que carrega e volta **sem texto algum**, nem no `body`, é tratada como erro de
+infraestrutura (provável bloqueio de bot ou `NATURA_STORE_URL` inválida), não como
+"promoção fora do ar" — os dois casos pediam ações bem diferentes e antes se pareciam.
+
+O padrão do valor também ficou menos preso à copy: exige só "frete grátis" perto de um
+`R$`, aceita a ordem invertida e lê corretamente valores com separador de milhar
+(`R$ 1.000,00`, que o padrão antigo lia como `1`).
 
 Quando o padrão não é encontrado, a resposta ainda é `200`, com o motivo no corpo
 (`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve `500 ERRO_TECNICO: ...`.
