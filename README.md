@@ -12,14 +12,18 @@ entra só como reserva. Não há dependências npm.
 |---|---|
 | `GET /api/frete` | Só o limiar do frete grátis (ex.: `149` ou `79,90`) |
 | `GET /api/frete2` | Uma linha por faixa: `Frete Grátis de "Natura" : 149`, separadas por `\n` |
-| `GET /` | Página de status em HTML (o mesmo que `/api/status`) |
+| `GET /` | Painel de status em HTML (o mesmo que `/api/status`) |
+| `GET /api/status-data` | Estado atual estruturado em JSON, usado pelo painel e por monitores |
 
 As duas primeiras respondem `text/plain; charset=utf-8`.
 
-A página inicial faz uma consulta real ao site a cada acesso e mostra um de três estados:
-**FUNCIONANDO**, **ATENÇÃO** (conectou mas não achou frete — promoção fora do ar) e
-**FORA DO AR** (falha de infraestrutura, com o motivo). Ela responde HTTP `503`
-nesse último caso, então serve como endpoint de monitoramento de uptime.
+A página inicial aparece imediatamente em estado **CONSULTANDO** e busca os dados em segundo
+plano. Ela distingue **FUNCIONANDO** (valor e lista disponíveis), **DEGRADADO** (só uma das
+duas rotas tem dados), **SEM PROMOÇÃO** e **FORA DO AR**. Há timeout amigável, nova tentativa
+manual e diagnóstico técnico recolhível.
+
+O HTML do painel sempre responde `200`; use `/api/status-data` para monitoramento. Esse
+endpoint responde `503` em falha de infraestrutura e traz o estado em JSON.
 
 O diagnóstico mostra **de qual seletor** o texto veio, **como** a página foi esperada,
 quantas tentativas foram necessárias e uma amostra do **texto lido**. Quando algo parar de
@@ -33,7 +37,9 @@ Três fontes, em ordem, e a página de status diz qual respondeu (**Lido de**):
 1. **Vitrine por `GET` simples** (`http-direto`) — o anúncio das faixas está no HTML do
    servidor. Responde em milissegundos, sem cota e sem fila.
 2. **Páginas de produto** (`página de produto`) — têm um campo dedicado ao limiar. Três
-   URLs tentadas em ordem, porque um produto pode sair do ar (`NATURA_PRODUTO_URLS`).
+   URLs são tentadas em ordem, porque um produto pode sair do ar (`NATURA_PRODUTO_URLS`).
+   Essa fonte encerra `/api/frete`, mas nunca é apresentada como lista completa em
+   `/api/frete2`.
 3. **Browserless** — último recurso, quando nenhuma das anteriores serve.
 
 ### Por que os padrões são ancorados na frase inteira
@@ -142,8 +148,10 @@ O padrão do valor também ficou menos preso à copy: exige só "frete grátis" 
 `R$`, aceita a ordem invertida e lê corretamente valores com separador de milhar
 (`R$ 1.000,00`, que o padrão antigo lia como `1`).
 
-Quando o padrão não é encontrado, a resposta ainda é `200`, com o motivo no corpo
-(`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve `500 ERRO_TECNICO: ...`.
+Quando o padrão não é encontrado, as rotas de texto respondem `404`, mantendo o motivo no
+corpo (`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve
+`500 ERRO_TECNICO: ...`; métodos diferentes de GET/HEAD devolvem `405`. O cabeçalho
+`X-Result-Status` contém `ok`, `not-found` ou `error`.
 
 ## Variáveis de ambiente
 
@@ -195,4 +203,12 @@ echo "BROWSERLESS_TOKEN=seu_token" > .env.local
 vercel dev
 curl http://localhost:3000/api/frete
 curl http://localhost:3000/api/frete2
+curl http://localhost:3000/api/status-data
+```
+
+Verificação local sem dependências adicionais:
+
+```bash
+npm run check
+npm test
 ```

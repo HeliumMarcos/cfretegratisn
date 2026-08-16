@@ -1,6 +1,10 @@
 {
   "name": "scraper-natura",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "type": "module",
-  "main": "api/frete.js"
+  "main": "api/frete.js",
+  "scripts": {
+    "check": "node --check api/status.js && node --check api/status-data.js && node --check api/frete.js && node --check api/frete2.js && node --check lib/natura.js",
+    "test": "node --test"
+  }
 }
