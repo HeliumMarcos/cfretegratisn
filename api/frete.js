@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     try {
         // Esta rota devolve só o valor, então não precisa da lista de faixas — e assim a
         // leitura para na página de produto, sem tocar na vitrine nem no Browserless.
-        const { valor, textos } = await lerFrete({ precisaLista: false });
+        const { valor, textos } = await lerFrete();
 
         if (valor !== null) {
             // Retorna estritamente o valor capturado (ex: 149 ou 99,00) sem manipulação

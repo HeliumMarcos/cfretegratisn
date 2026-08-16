@@ -1,7 +1,7 @@
 # scraper-natura
 
-Duas rotas serverless (Vercel) que leem o valor mínimo de frete grátis na vitrine da Natura
-e devolvem texto plano, pronto para ser consumido por uma página no HostGator.
+Uma rota serverless (Vercel) que lê o valor mínimo de frete grátis na vitrine da Natura
+e devolve texto plano, pronto para ser consumido por uma página no HostGator.
 
 A leitura é feita por `GET` simples sempre que possível; a API REST `/scrape` do Browserless
 entra só como reserva. Não há dependências npm.
@@ -11,16 +11,14 @@ entra só como reserva. Não há dependências npm.
 | Rota | Retorno |
 |---|---|
 | `GET /api/frete` | Só o limiar do frete grátis (ex.: `149` ou `79,90`) |
-| `GET /api/frete2` | Uma linha por faixa: `Frete Grátis de "Natura" : 149`, separadas por `\n` |
 | `GET /` | Painel de status em HTML (o mesmo que `/api/status`) |
 | `GET /api/status-data` | Estado atual estruturado em JSON, usado pelo painel e por monitores |
 
-As duas primeiras respondem `text/plain; charset=utf-8`.
+`/api/frete` responde `text/plain; charset=utf-8`.
 
 A página inicial aparece imediatamente em estado **CONSULTANDO** e busca os dados em segundo
-plano. Ela distingue **FUNCIONANDO** (valor e lista disponíveis), **DEGRADADO** (só uma das
-duas rotas tem dados), **SEM PROMOÇÃO** e **FORA DO AR**. Há timeout amigável, nova tentativa
-manual e diagnóstico técnico recolhível.
+plano. Ela distingue **FUNCIONANDO**, **SEM PROMOÇÃO** e **FORA DO AR**. Há timeout amigável,
+nova tentativa manual e diagnóstico técnico recolhível.
 
 O HTML do painel sempre responde `200`; use `/api/status-data` para monitoramento. Esse
 endpoint responde `503` em falha de infraestrutura e traz o estado em JSON.
@@ -38,8 +36,6 @@ Três fontes, em ordem, e a página de status diz qual respondeu (**Lido de**):
    servidor. Responde em milissegundos, sem cota e sem fila.
 2. **Páginas de produto** (`página de produto`) — têm um campo dedicado ao limiar. Três
    URLs são tentadas em ordem, porque um produto pode sair do ar (`NATURA_PRODUTO_URLS`).
-   Essa fonte encerra `/api/frete`, mas nunca é apresentada como lista completa em
-   `/api/frete2`.
 3. **Browserless** — último recurso, quando nenhuma das anteriores serve.
 
 ### Por que os padrões são ancorados na frase inteira
@@ -184,7 +180,7 @@ https://SEU-PROJETO.vercel.app/?fast=1   # com o bloqueio
 ```
 
 Compare o campo **Tempo de resposta** entre os dois, algumas vezes. Se compensar, ligue
-`BROWSERLESS_FAST=1` no Vercel para valer também em `/api/frete` e `/api/frete2`.
+`BROWSERLESS_FAST=1` no Vercel para valer em `/api/frete`.
 
 Se o servidor recusar a chave `rejectResourceTypes`, a requisição é repetida sem ela
 automaticamente e a página informa `rápido recusado pelo servidor` — nunca derruba a rota.
@@ -202,7 +198,6 @@ Se algum dia cair numa instância v1, basta definir `BROWSERLESS_API_VERSION=v1`
 echo "BROWSERLESS_TOKEN=seu_token" > .env.local
 vercel dev
 curl http://localhost:3000/api/frete
-curl http://localhost:3000/api/frete2
 curl http://localhost:3000/api/status-data
 ```
 

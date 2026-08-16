@@ -6,25 +6,18 @@ import { Script } from 'node:vm';
 import {
     extrairDeHtml,
     extrairLimiar,
-    extrairLista,
     extrairValor,
     limiarDeJson,
 } from '../lib/natura.js';
 import { classificarResultado } from '../api/status-data.js';
 import statusHandler from '../api/status.js';
 
-test('extrai e normaliza as faixas do HTML da vitrine', () => {
+test('extrai e normaliza o valor da Natura no HTML da vitrine', () => {
     const html = `
         <div>Frete grátis Avon acima de R$ 79,90</div>
         <div>Frete grátis Natura acima de R$ 149,00</div>
     `;
-    assert.deepEqual(extrairDeHtml(html), {
-        valor: '149',
-        linhas: [
-            'Frete Grátis de "Natura" : 149',
-            'Frete Grátis de "Avon" : 79,90',
-        ],
-    });
+    assert.deepEqual(extrairDeHtml(html), { valor: '149' });
 });
 
 test('prefere o limiar sem centavos presente no aria-label', () => {
@@ -40,25 +33,20 @@ test('aceita chave JSON de frete apenas quando representa um limiar plausível',
     assert.equal(limiarDeJson('{"shippingCategory":"9,00"}'), null);
 });
 
-test('prioriza Natura e remove duplicações no texto renderizado', () => {
+test('prioriza Natura no texto renderizado', () => {
     const textos = [
         'Frete grátis Avon acima de R$ 79,90. Frete grátis Natura acima de R$ 149,00.',
         'Frete grátis Natura acima de R$ 149,00.',
     ];
     assert.equal(extrairValor(textos).valor, '149');
-    assert.deepEqual(extrairLista(textos), [
-        'Frete Grátis de "Natura" : 149',
-        'Frete Grátis de "Avon" : 79,90',
-    ]);
 });
 
-test('classifica sucesso completo, parcial e ausência de promoção', () => {
-    assert.equal(classificarResultado({ valorOk: true, listaOk: true }).estado, 'bom');
-    assert.equal(classificarResultado({ valorOk: true, listaOk: false }).rotulo, 'DEGRADADO');
-    assert.equal(classificarResultado({ valorOk: false, listaOk: false }).rotulo, 'SEM PROMOÇÃO');
+test('classifica sucesso e ausência de promoção', () => {
+    assert.equal(classificarResultado({ valorOk: true }).estado, 'bom');
+    assert.equal(classificarResultado({ valorOk: false }).rotulo, 'SEM PROMOÇÃO');
 });
 
-test('precisaLista impede que uma página de produto finja ser uma lista completa', async (t) => {
+test('página de produto encerra a busca quando fornece um valor confiável', async (t) => {
     const servidor = createServer((req, res) => {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         if (req.url === '/produto') {
@@ -91,16 +79,10 @@ test('precisaLista impede que uma página de produto finja ser uma lista complet
     });
 
     const modulo = await import(`../lib/natura.js?orquestracao=${Date.now()}`);
-    const soValor = await modulo.lerFrete({ precisaLista: false });
-    assert.equal(soValor.valor, '149');
-    assert.equal(soValor.fonteValor, modulo.FONTE_PRODUTO);
-
-    const listaCompleta = await modulo.lerFrete({ precisaLista: true });
-    assert.equal(listaCompleta.valor, '149');
-    assert.deepEqual(listaCompleta.linhas, []);
-    assert.equal(listaCompleta.valorOk, true);
-    assert.equal(listaCompleta.listaOk, false);
-    assert.equal(listaCompleta.completo, false);
+    const resultado = await modulo.lerFrete();
+    assert.equal(resultado.valor, '149');
+    assert.equal(resultado.fonteValor, modulo.FONTE_PRODUTO);
+    assert.equal(resultado.valorOk, true);
 });
 
 test('painel entrega loading, retry e semântica acessível antes da consulta', () => {
@@ -118,6 +100,7 @@ test('painel entrega loading, retry e semântica acessível antes da consulta', 
     assert.match(resposta.body, /aria-current="page" class="atual">Rápido/);
     assert.match(resposta.body, /<details>/);
     assert.match(resposta.body, /scope = 'row'/);
+    assert.doesNotMatch(resposta.body, /api\/frete2/);
     const inicioScript = resposta.body.indexOf('<script>') + '<script>'.length;
     const fimScript = resposta.body.indexOf('</script>');
     assert.doesNotThrow(() => new Script(resposta.body.slice(inicioScript, fimScript)));

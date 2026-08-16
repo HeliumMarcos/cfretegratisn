@@ -62,7 +62,7 @@ export default function handler(req, res) {
              overflow-wrap:anywhere; }
   section, details { background:var(--card); border:1px solid var(--linha); border-radius:12px;
                      padding:18px; margin-bottom:14px; }
-  .resultados { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .resultados { display:block; }
   .resultado { min-width:0; background:var(--card-2); border:1px solid var(--linha);
                border-radius:10px; padding:14px; }
   .resultado output { display:block; min-height:48px; white-space:pre-wrap; overflow-wrap:anywhere;
@@ -100,7 +100,6 @@ export default function handler(req, res) {
   footer { color:var(--fraco); font-size:.83rem; text-align:center; margin-top:20px; }
   @media (max-width:540px) {
     body { padding:16px 12px 28px; }
-    .resultados { grid-template-columns:1fr; }
     section { padding:15px; }
     th { width:42%; }
   }
@@ -116,15 +115,11 @@ export default function handler(req, res) {
   <p id="detalhe" class="detalhe">Buscando os valores atuais de frete grátis…</p>
 
   <section aria-labelledby="resultados-titulo">
-    <h2 id="resultados-titulo">Resultados das rotas</h2>
+    <h2 id="resultados-titulo">Resultado da rota</h2>
     <div class="resultados">
       <article id="resultado-frete" class="resultado" aria-labelledby="frete-titulo">
         <h3 id="frete-titulo">/api/frete</h3>
         <output id="frete-valor" class="vazio">aguardando…</output>
-      </article>
-      <article id="resultado-frete2" class="resultado" aria-labelledby="frete2-titulo">
-        <h3 id="frete2-titulo">/api/frete2</h3>
-        <output id="frete2-valor" class="vazio">aguardando…</output>
       </article>
     </div>
   </section>
@@ -161,9 +156,7 @@ export default function handler(req, res) {
   const detalhe = document.querySelector('#detalhe');
   const botao = document.querySelector('#recarregar');
   const freteCard = document.querySelector('#resultado-frete');
-  const frete2Card = document.querySelector('#resultado-frete2');
   const freteValor = document.querySelector('#frete-valor');
-  const frete2Valor = document.querySelector('#frete2-valor');
   const linhasDiagnostico = document.querySelector('#linhas-diagnostico');
   const textoLido = document.querySelector('#texto-lido');
   const rodape = document.querySelector('#rodape');
@@ -178,7 +171,7 @@ export default function handler(req, res) {
     linhasDiagnostico.replaceChildren();
     const rotulos = {
       token:'Token', host:'Host', apiBrowserless:'Formato da API', fastPedido:'Modo pedido',
-      modo:'Modo aplicado', fonteValor:'Fonte do valor', fonteLista:'Fonte da lista',
+      modo:'Modo aplicado', fonteValor:'Fonte do valor',
       produto:'Produto', espera:'Espera', tentativas:'Tentativas',
       blocosLidos:'Blocos lidos', erroFallback:'Erro do fallback'
     };
@@ -202,11 +195,8 @@ export default function handler(req, res) {
     rotulo.textContent = dados.rotulo || 'SEM RESPOSTA';
     detalhe.textContent = dados.detalhe || 'A consulta não retornou detalhes.';
     const frete = dados.resultados?.frete ?? { ok:false, valor:null };
-    const frete2 = dados.resultados?.frete2 ?? { ok:false, linhas:[] };
     freteCard.dataset.ok = String(Boolean(frete.ok));
-    frete2Card.dataset.ok = String(Boolean(frete2.ok));
     textoResultado(freteValor, frete.valor, 'sem valor confiável');
-    textoResultado(frete2Valor, frete2.linhas?.join('\\n'), 'sem lista confiável');
     preencherDiagnostico(dados.diagnostico ?? {});
     const quando = dados.verificadoEm ? new Date(dados.verificadoEm).toLocaleString('pt-BR') : 'agora';
     const duracao = Number.isFinite(dados.duracaoMs) ? ' em ' + dados.duracaoMs + ' ms' : '';
@@ -216,7 +206,7 @@ export default function handler(req, res) {
   function mostrarErroLocal(mensagem) {
     renderizar({
       estado:'ruim', rotulo:'SEM RESPOSTA', detalhe:mensagem,
-      resultados:{frete:{ok:false,valor:null},frete2:{ok:false,linhas:[]}},
+      resultados:{frete:{ok:false,valor:null}},
       diagnostico:{erroFallback:mensagem,textoLido:'nada foi lido'},
       verificadoEm:new Date().toISOString()
     });

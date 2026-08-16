@@ -31,18 +31,10 @@ function descreverEspera(esperaAplicada) {
 }
 
 export function classificarResultado(resultado) {
-    if (resultado.valorOk && resultado.listaOk) {
+    if (resultado.valorOk) {
         return {
             estado: 'bom', rotulo: 'FUNCIONANDO',
-            detalhe: 'As duas rotas estão respondendo com dados reais.',
-        };
-    }
-    if (resultado.valorOk || resultado.listaOk) {
-        const funciona = resultado.valorOk ? '/api/frete' : '/api/frete2';
-        const falha = resultado.valorOk ? '/api/frete2' : '/api/frete';
-        return {
-            estado: 'atencao', rotulo: 'DEGRADADO',
-            detalhe: `${funciona} está disponível, mas ${falha} ainda não tem dados confiáveis.`,
+            detalhe: '/api/frete está respondendo com um valor real.',
         };
     }
     return {
@@ -74,7 +66,7 @@ export default async function handler(req, res) {
     const inicio = Date.now();
     const fast = lerFast(req);
     try {
-        const resultado = await lerFrete({ fast, precisaLista: true });
+        const resultado = await lerFrete({ fast });
         const classificacao = classificarResultado(resultado);
         const textoLido = resultado.amostra
             ?? (resultado.textos.length > 0 ? amostraTexto(resultado.textos) : null);
@@ -85,13 +77,11 @@ export default async function handler(req, res) {
             duracaoMs: Date.now() - inicio,
             resultados: {
                 frete: { ok: resultado.valorOk, valor: resultado.valor },
-                frete2: { ok: resultado.listaOk, linhas: resultado.linhas },
             },
             diagnostico: {
                 ...diagnosticoBase(fast),
                 modo: descreverModo(resultado, fast),
                 fonteValor: resultado.fonteValor ?? '—',
-                fonteLista: resultado.fonteLista ?? '—',
                 produto: resultado.detalheFonte ?? resultado.motivoProduto ?? '—',
                 espera: descreverEspera(resultado.esperaAplicada),
                 tentativas: resultado.tentativas || '—',
@@ -108,12 +98,11 @@ export default async function handler(req, res) {
             duracaoMs: Date.now() - inicio,
             resultados: {
                 frete: { ok: false, valor: null },
-                frete2: { ok: false, linhas: [] },
             },
             diagnostico: {
                 ...diagnosticoBase(fast),
                 modo: fast ? 'rápido' : 'normal',
-                fonteValor: '—', fonteLista: '—', produto: '—', espera: '—',
+                fonteValor: '—', produto: '—', espera: '—',
                 tentativas: '—', blocosLidos: 0, erroFallback: mensagem,
                 textoLido: 'nada foi lido',
             },
