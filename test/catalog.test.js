@@ -102,13 +102,13 @@ test('itens iguais, já pendentes ou descartados não consomem a cota útil', ()
         available: true,
     };
 
-    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:3276:available' } }), false);
+    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:3276' } }), false);
     assert.equal(isUsefulProduct(product, { observations: { 'NATBRA-123007': ['8190:3276:available'] } }), false);
     assert.equal(isUsefulProduct(product, { blocked: ['NATBRA-123007'] }), false);
-    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:4990:available' } }), true);
+    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:4990' } }), true);
     assert.equal(isUsefulProduct({ ...product, available: false, availability_status: 'sold_out' }, {
-        products: { 'NATBRA-123007': '8190:3276:available' },
-    }), true);
+        products: { 'NATBRA-123007': '8190:3276' },
+    }), false);
 });
 
 test('normaliza os avisos de disponibilidade da Natura', () => {

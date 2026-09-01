@@ -187,9 +187,9 @@ em lotes de até 200 mudanças por execução, permitindo repetir a execução s
 que já estão na fila. Por fim, o coletor usa o mesmo encurtador do botão “Compartilhar” da
 Natura para preencher `sminhaloja.natura.com`.
 
-A coleta também diferencia `Produto esgotado` de `Acabou, mas volta logo`. Uma mudança
-para qualquer um desses estados é tratada como revisão útil mesmo quando o preço não mudou,
-e o painel HostGator exibe o aviso antes da aprovação.
+A coleta também diferencia `Produto esgotado` de `Acabou, mas volta logo`. O painel mostra
+o aviso quando o item já precisa de revisão por ser novo ou por ter mudança de preço. Uma
+alteração apenas no estoque não cria proposta para produto que já está cadastrado.
 
 Antes de publicar esta versão, configure nas variáveis de ambiente da Vercel:
 
