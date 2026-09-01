@@ -169,13 +169,17 @@ corpo (`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve
 | `AUTOMATION_INGESTION_SECRET` | sim, automação | mesmo segredo da HostGator; mínimo de 32 caracteres |
 | `NATURA_TOP_SELLERS_URL` | não | ranking de promoções mais vendidas do consultor |
 | `NATURA_DISCOUNTS_URL` | não | ranking de promoções por maior desconto |
+| `NATURA_SHORTENER_API_KEY` | sim, automação | chave pública usada pelo compartilhamento oficial da Natura |
+| `NATURA_SHORTENER_BEARER` | sim, automação | autorização pública usada pelo compartilhamento oficial da Natura |
 
 ## Automação do catálogo
 
 O `vercel.json` agenda `/api/catalog-sync` diariamente às 10:00 UTC. No plano Hobby, a
 Vercel pode iniciar a execução em qualquer momento dentro dessa hora. A função abre os
-dois rankings em paralelo na mesma sessão Browserless, lê somente a lista principal,
-limita cada origem aos 10 primeiros cards e elimina referências repetidas.
+dois rankings em sequência na mesma sessão Browserless, lê somente a lista principal,
+limita cada origem aos 10 primeiros cards e elimina referências repetidas. Em seguida,
+usa o mesmo encurtador do botão “Compartilhar” da Natura para preencher o link oficial
+`sminhaloja.natura.com`; uma resposta ainda longa é repetida uma vez antes de falhar.
 
 Antes de publicar esta versão, configure nas variáveis de ambiente da Vercel:
 
