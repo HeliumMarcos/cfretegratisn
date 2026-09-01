@@ -95,7 +95,7 @@ test('repete uma vez quando o encurtador ainda não devolve o link curto', async
     }
 });
 
-test('itens iguais, já pendentes ou descartados não consomem a cota útil', () => {
+test('itens iguais, observações ignoradas ou descartados não consomem a cota útil', () => {
     const product = {
         reference: 'NATBRA-123007',
         price_normal_cents: 8190,

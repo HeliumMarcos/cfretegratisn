@@ -180,11 +180,10 @@ tarefa Cron da HostGator executa `php artisan schedule:run` a cada cinco minutos
 seleciona somente as páginas que venceram naquele horário e chama `/api/catalog-source-run`.
 O botão “Executar agora” chama a mesma rota para uma página individual.
 
-Antes de navegar, o Laravel envia um retrato dos preços atuais, propostas já pendentes,
-observações ignoradas até mudar e referências descartadas. O navegador continua carregando
+Antes de navegar, o Laravel envia um retrato dos preços atuais, observações ignoradas até
+mudar e referências descartadas. O navegador continua carregando
 a grade até completar a quantidade de alterações realmente úteis. O modo “todos” trabalha
-em lotes de até 200 mudanças por execução, permitindo repetir a execução sem reenviar itens
-que já estão na fila. Por fim, o coletor usa o mesmo encurtador do botão “Compartilhar” da
+em lotes de até 200 mudanças por execução. Por fim, o coletor usa o mesmo encurtador do botão “Compartilhar” da
 Natura para preencher `sminhaloja.natura.com`.
 
 A coleta também diferencia `Produto esgotado` de `Acabou, mas volta logo`. O painel mostra
