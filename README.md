@@ -191,6 +191,10 @@ A coleta também diferencia `Produto esgotado` de `Acabou, mas volta logo`. O pa
 o aviso quando o item já precisa de revisão por ser novo ou por ter mudança de preço. Uma
 alteração apenas no estoque não cria proposta para produto que já está cadastrado.
 
+Para produtos que realmente entrarão na fila, o nome do card é confirmado na página
+individual. O coletor lê o schema `Product`, exige que o `sku` seja o mesmo NATBRA e usa o
+nome completo dali — incluindo marca, quantidade e composição de kits quando informadas.
+
 Antes de publicar esta versão, configure nas variáveis de ambiente da Vercel:
 
 ```text

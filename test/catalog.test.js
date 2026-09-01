@@ -4,6 +4,7 @@ import catalogSourceHandler from '../api/catalog-source-run.js';
 
 import {
     createSignedRequest,
+    extractProductNameFromHtml,
     isValidNaturaShortUrl,
     isUsefulProduct,
     mergeRankings,
@@ -116,6 +117,23 @@ test('normaliza os avisos de disponibilidade da Natura', () => {
     assert.equal(normalizeAvailabilityStatus('back_soon', false), 'back_soon');
     assert.equal(normalizeAvailabilityStatus(null, true), 'available');
     assert.equal(normalizeAvailabilityStatus(null, false), 'unavailable');
+});
+
+test('usa o nome completo do schema Product somente quando o NATBRA confere', () => {
+    const html = `<!doctype html><html><head>
+        <script type="application/ld+json">${JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            name: 'Kit Natura Tododia Sabonete em Barra Puro Vegetal (4 caixas)\n ',
+            sku: 'NATBRA-247217',
+        })}</script>
+    </head></html>`;
+
+    assert.equal(
+        extractProductNameFromHtml(html, 'NATBRA-247217'),
+        'Kit Natura Tododia Sabonete em Barra Puro Vegetal (4 caixas)',
+    );
+    assert.equal(extractProductNameFromHtml(html, 'NATBRA-999999'), null);
 });
 
 test('executor de página rejeita chamadas sem o segredo compartilhado', async () => {
