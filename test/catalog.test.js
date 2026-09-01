@@ -7,6 +7,7 @@ import {
     isValidNaturaShortUrl,
     isUsefulProduct,
     mergeRankings,
+    normalizeAvailabilityStatus,
     priceToCents,
     shortenProductUrl,
 } from '../lib/catalog.js';
@@ -101,10 +102,20 @@ test('itens iguais, já pendentes ou descartados não consomem a cota útil', ()
         available: true,
     };
 
-    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:3276' } }), false);
-    assert.equal(isUsefulProduct(product, { observations: { 'NATBRA-123007': ['8190:3276:1'] } }), false);
+    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:3276:available' } }), false);
+    assert.equal(isUsefulProduct(product, { observations: { 'NATBRA-123007': ['8190:3276:available'] } }), false);
     assert.equal(isUsefulProduct(product, { blocked: ['NATBRA-123007'] }), false);
-    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:4990' } }), true);
+    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:4990:available' } }), true);
+    assert.equal(isUsefulProduct({ ...product, available: false, availability_status: 'sold_out' }, {
+        products: { 'NATBRA-123007': '8190:3276:available' },
+    }), true);
+});
+
+test('normaliza os avisos de disponibilidade da Natura', () => {
+    assert.equal(normalizeAvailabilityStatus('sold_out', false), 'sold_out');
+    assert.equal(normalizeAvailabilityStatus('back_soon', false), 'back_soon');
+    assert.equal(normalizeAvailabilityStatus(null, true), 'available');
+    assert.equal(normalizeAvailabilityStatus(null, false), 'unavailable');
 });
 
 test('executor de página rejeita chamadas sem o segredo compartilhado', async () => {
