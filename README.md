@@ -3,9 +3,9 @@
 Uma rota serverless (Vercel) que lê o valor mínimo de frete grátis na vitrine da Natura
 e devolve texto plano, pronto para ser consumido por uma página no HostGator.
 
-O mesmo projeto também executa uma coleta diária dos 10 primeiros produtos em “Mais
-vendidos” e “Maior desconto”. Os resultados são enviados, com assinatura HMAC, para a
-caixa **Admin → Automação/Aprovação** do Laravel; nenhum produto é publicado diretamente.
+O mesmo projeto analisa as páginas configuradas em **Admin → Automação/Aprovação**. Cada
+página define quantidade útil, modo “todos” e horário próprio. Os resultados são enviados,
+com assinatura HMAC, para revisão no Laravel; nenhum produto é publicado diretamente.
 
 A leitura é feita por `GET` simples sempre que possível; a API REST `/scrape` do Browserless
 entra só como reserva. Não há dependências npm.
@@ -17,7 +17,8 @@ entra só como reserva. Não há dependências npm.
 | `GET /api/frete` | Só o limiar do frete grátis (ex.: `149` ou `79,90`) |
 | `GET /` | Painel de status em HTML (o mesmo que `/api/status`) |
 | `GET /api/status-data` | Estado atual estruturado em JSON, usado pelo painel e por monitores |
-| `GET /api/catalog-sync` | Coleta diária protegida por `CRON_SECRET` (uso do Vercel Cron) |
+| `POST /api/catalog-source-run` | Analisa uma página configurada; chamada autenticada pela HostGator |
+| `GET /api/catalog-sync` | Coletor legado dos dois rankings fixos, protegido por `CRON_SECRET` |
 
 `/api/frete` responde `text/plain; charset=utf-8`.
 
@@ -174,12 +175,17 @@ corpo (`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve
 
 ## Automação do catálogo
 
-O `vercel.json` agenda `/api/catalog-sync` diariamente às 10:00 UTC. No plano Hobby, a
-Vercel pode iniciar a execução em qualquer momento dentro dessa hora. A função abre os
-dois rankings em sequência na mesma sessão Browserless, lê somente a lista principal,
-limita cada origem aos 10 primeiros cards e elimina referências repetidas. Em seguida,
-usa o mesmo encurtador do botão “Compartilhar” da Natura para preencher o link oficial
-`sminhaloja.natura.com`; uma resposta ainda longa é repetida uma vez antes de falhar.
+Os horários ficam no banco do Laravel, em vez de serem gravados no `vercel.json`. Uma única
+tarefa Cron da HostGator executa `php artisan schedule:run` a cada cinco minutos; o Laravel
+seleciona somente as páginas que venceram naquele horário e chama `/api/catalog-source-run`.
+O botão “Executar agora” chama a mesma rota para uma página individual.
+
+Antes de navegar, o Laravel envia um retrato dos preços atuais, propostas já pendentes,
+observações ignoradas até mudar e referências descartadas. O navegador continua carregando
+a grade até completar a quantidade de alterações realmente úteis. O modo “todos” trabalha
+em lotes de até 200 mudanças por execução, permitindo repetir a execução sem reenviar itens
+que já estão na fila. Por fim, o coletor usa o mesmo encurtador do botão “Compartilhar” da
+Natura para preencher `sminhaloja.natura.com`.
 
 Antes de publicar esta versão, configure nas variáveis de ambiente da Vercel:
 
@@ -193,6 +199,7 @@ Na HostGator, adicione o mesmo valor ao `.env`:
 
 ```text
 AUTOMATION_INGESTION_SECRET=o-mesmo-segredo-configurado-na-vercel
+AUTOMATION_RUNNER_URL=https://cfretegratisn.vercel.app/api/catalog-source-run
 ```
 
 Cada envio inclui timestamp de curta validade, chave de idempotência e assinatura do

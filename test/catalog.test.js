@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import catalogSourceHandler from '../api/catalog-source-run.js';
 
 import {
     createSignedRequest,
     isValidNaturaShortUrl,
+    isUsefulProduct,
     mergeRankings,
     priceToCents,
     shortenProductUrl,
@@ -88,5 +90,39 @@ test('repete uma vez quando o encurtador ainda não devolve o link curto', async
         else process.env.NATURA_SHORTENER_API_KEY = previousKey;
         if (previousBearer === undefined) delete process.env.NATURA_SHORTENER_BEARER;
         else process.env.NATURA_SHORTENER_BEARER = previousBearer;
+    }
+});
+
+test('itens iguais, já pendentes ou descartados não consomem a cota útil', () => {
+    const product = {
+        reference: 'NATBRA-123007',
+        price_normal_cents: 8190,
+        price_promo_cents: 3276,
+        available: true,
+    };
+
+    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:3276' } }), false);
+    assert.equal(isUsefulProduct(product, { observations: { 'NATBRA-123007': ['8190:3276:1'] } }), false);
+    assert.equal(isUsefulProduct(product, { blocked: ['NATBRA-123007'] }), false);
+    assert.equal(isUsefulProduct(product, { products: { 'NATBRA-123007': '8190:4990' } }), true);
+});
+
+test('executor de página rejeita chamadas sem o segredo compartilhado', async () => {
+    const previousSecret = process.env.AUTOMATION_INGESTION_SECRET;
+    process.env.AUTOMATION_INGESTION_SECRET = 'shared-secret-with-at-least-thirty-two-characters';
+    const output = { statusCode: null, body: null };
+    const response = {
+        setHeader() {},
+        status(code) { output.statusCode = code; return this; },
+        json(body) { output.body = body; return this; },
+    };
+
+    try {
+        await catalogSourceHandler({ method: 'POST', headers: {}, body: {} }, response);
+        assert.equal(output.statusCode, 401);
+        assert.equal(output.body.ok, false);
+    } finally {
+        if (previousSecret === undefined) delete process.env.AUTOMATION_INGESTION_SECRET;
+        else process.env.AUTOMATION_INGESTION_SECRET = previousSecret;
     }
 });
