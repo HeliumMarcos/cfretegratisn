@@ -3,6 +3,10 @@
 Uma rota serverless (Vercel) que lê o valor mínimo de frete grátis na vitrine da Natura
 e devolve texto plano, pronto para ser consumido por uma página no HostGator.
 
+O mesmo projeto também executa uma coleta diária dos 10 primeiros produtos em “Mais
+vendidos” e “Maior desconto”. Os resultados são enviados, com assinatura HMAC, para a
+caixa **Admin → Automação/Aprovação** do Laravel; nenhum produto é publicado diretamente.
+
 A leitura é feita por `GET` simples sempre que possível; a API REST `/scrape` do Browserless
 entra só como reserva. Não há dependências npm.
 
@@ -13,6 +17,7 @@ entra só como reserva. Não há dependências npm.
 | `GET /api/frete` | Só o limiar do frete grátis (ex.: `149` ou `79,90`) |
 | `GET /` | Painel de status em HTML (o mesmo que `/api/status`) |
 | `GET /api/status-data` | Estado atual estruturado em JSON, usado pelo painel e por monitores |
+| `GET /api/catalog-sync` | Coleta diária protegida por `CRON_SECRET` (uso do Vercel Cron) |
 
 `/api/frete` responde `text/plain; charset=utf-8`.
 
@@ -159,6 +164,35 @@ corpo (`FALHA_REGEX: ...` ou `FALHA: ...`). Erro de infraestrutura devolve
 | `BROWSERLESS_FAST` | não | desligado (`1` liga) |
 | `NATURA_STORE_URL` | não | vitrine de promoções do consultor `helium` |
 | `NATURA_PRODUTO_URLS` | não | três páginas de produto, separadas por vírgula |
+| `CRON_SECRET` | sim, automação | protege a execução agendada; mínimo de 16 caracteres |
+| `AUTOMATION_INGESTION_URL` | sim, automação | `https://bio.heliummarcos.com.br/api/automation/proposals` |
+| `AUTOMATION_INGESTION_SECRET` | sim, automação | mesmo segredo da HostGator; mínimo de 32 caracteres |
+| `NATURA_TOP_SELLERS_URL` | não | ranking de promoções mais vendidas do consultor |
+| `NATURA_DISCOUNTS_URL` | não | ranking de promoções por maior desconto |
+
+## Automação do catálogo
+
+O `vercel.json` agenda `/api/catalog-sync` diariamente às 10:00 UTC. No plano Hobby, a
+Vercel pode iniciar a execução em qualquer momento dentro dessa hora. A função abre os
+dois rankings em paralelo na mesma sessão Browserless, lê somente a lista principal,
+limita cada origem aos 10 primeiros cards e elimina referências repetidas.
+
+Antes de publicar esta versão, configure nas variáveis de ambiente da Vercel:
+
+```text
+CRON_SECRET=um-segredo-exclusivo-para-o-agendamento
+AUTOMATION_INGESTION_URL=https://bio.heliummarcos.com.br/api/automation/proposals
+AUTOMATION_INGESTION_SECRET=o-mesmo-segredo-configurado-na-hostgator
+```
+
+Na HostGator, adicione o mesmo valor ao `.env`:
+
+```text
+AUTOMATION_INGESTION_SECRET=o-mesmo-segredo-configurado-na-vercel
+```
+
+Cada envio inclui timestamp de curta validade, chave de idempotência e assinatura do
+corpo integral. Uma repetição do mesmo lote não cria propostas duplicadas.
 
 ## Modo rápido
 

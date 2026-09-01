@@ -1,9 +1,25 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/*.js": {
+    "api/catalog-sync.js": {
+      "maxDuration": 60
+    },
+    "api/frete.js": {
+      "maxDuration": 30
+    },
+    "api/status.js": {
+      "maxDuration": 30
+    },
+    "api/status-data.js": {
       "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/catalog-sync",
+      "schedule": "0 10 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/", "destination": "/api/status" }
   ]
