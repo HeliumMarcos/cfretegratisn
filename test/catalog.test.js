@@ -9,9 +9,19 @@ import {
     isUsefulProduct,
     mergeRankings,
     normalizeAvailabilityStatus,
+    normalizeReferenceList,
     priceToCents,
     shortenProductUrl,
 } from '../lib/catalog.js';
+
+test('normaliza, remove duplicatas e rejeita referências inválidas', () => {
+    assert.deepEqual(
+        normalizeReferenceList([' natbra-140459 ', 'NATBRA-247217', 'NATBRA-140459']),
+        ['NATBRA-140459', 'NATBRA-247217'],
+    );
+    assert.throws(() => normalizeReferenceList(['140459']), /formato NATBRA/);
+    assert.throws(() => normalizeReferenceList([]), /1 a 30/);
+});
 
 test('converte preço brasileiro para centavos sem usar float', () => {
     assert.equal(priceToCents('R$ 32,76'), 3276);

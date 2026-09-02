@@ -4,6 +4,9 @@
     "api/catalog-source-run.js": {
       "maxDuration": 60
     },
+    "api/catalog-references.js": {
+      "maxDuration": 60
+    },
     "api/catalog-sync.js": {
       "maxDuration": 60
     },
