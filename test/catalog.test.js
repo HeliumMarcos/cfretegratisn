@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import catalogSourceHandler from '../api/catalog-source-run.js';
 
 import {
+    BROWSERLESS_REFERENCE_FUNCTION,
     createSignedRequest,
     extractProductNameFromHtml,
     isValidNaturaShortUrl,
@@ -13,6 +14,16 @@ import {
     priceToCents,
     shortenProductUrl,
 } from '../lib/catalog.js';
+
+test('coletor por referência abre o SKU diretamente e mantém fallback de busca', async () => {
+    const encodedModule = Buffer.from(BROWSERLESS_REFERENCE_FUNCTION).toString('base64');
+    const browserFunction = await import(`data:text/javascript;base64,${encodedModule}`);
+
+    assert.equal(typeof browserFunction.default, 'function');
+    assert.match(BROWSERLESS_REFERENCE_FUNCTION, /\/p\/-\//);
+    assert.match(BROWSERLESS_REFERENCE_FUNCTION, /replace\(\/\^NATBRA-/);
+    assert.match(BROWSERLESS_REFERENCE_FUNCTION, /Math\.min\(2, queue\.length\)/);
+});
 
 test('normaliza, remove duplicatas e rejeita referências inválidas', () => {
     assert.deepEqual(
