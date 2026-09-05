@@ -1,5 +1,44 @@
 # scraper-natura
 
+## Consulta de campanhas de frete — setembro/2026
+
+O Laravel atualizado usa **`GET /api/frete` com `Accept: application/json`**. Para
+inspecionar no navegador, use **`/api/frete?format=json`**. O contrato v2 retorna
+`schema_version`, `status`, `items`, `checked_at`, `discovery` e `message`.
+
+- Pesquisa a home e a vitrine configurada em `NATURA_STORE_URL`.
+- Descobre links nos banners, faixas promocionais e HTML, inclusive URLs cujo nome
+  não menciona frete. **Não depende de `/c/especial-frete`.**
+- Segue até 10 páginas oficiais, no máximo dois níveis de links e três requisições
+  simultâneas. Orçamento de 23 segundos dentro da função de 30 segundos.
+- Lê o regulamento `contentConditions` do CMS/Next e parágrafos explícitos. Não usa
+  um preço de produto próximo a um selo de frete como mínimo da campanha.
+- Retorna campanhas (`kind: campaign`) separadas da referência padrão (`kind: standard`).
+  Mantém valor, operador `gt`/`gte`, origem, início, término, modalidade e condições.
+- Campanhas vencidas recebem `expired: true`; futuras, `upcoming: true`.
+  Todas exigem revisão humana; validade desconhecida não é inventada.
+- Mantém leitura da página de produto. Se ela falhar, o Browserless já configurado
+  pode recuperar uma referência da vitrine, dentro do mesmo orçamento de tempo.
+- Bloqueia links/redirects descobertos fora do host permitido. Não acessa a sacola,
+  não usa a sessão do usuário, não inclui produtos nem finaliza pedidos.
+
+**Configuração opcional:** `NATURA_SHIPPING_PAGES` aceita URLs oficiais de páginas
+adicionais separadas por vírgula. São sementes extras, não substituem a descoberta.
+Nenhuma variável nova é obrigatória. Os segredos existentes não mudaram.
+
+**Limites:** a descoberta é limitada, não é uma varredura exaustiva da loja. Promoções
+somente em imagem, em páginas não vinculadas, personalizadas por login/CEP ou mudanças
+no CMS podem escapar. Falhas e limite de páginas geram aviso de consulta parcial.
+Frete zero numa sacola isolada não é tratado como prova de um mínimo universal.
+
+**Compatibilidade:** texto puro e o painel `/api/status` continuam monitorando a
+referência legada; não representam o conjunto de campanhas. Para campanhas, confira
+o contrato JSON v2 e **Admin → Frete grátis**. O restante deste README descreve também
+esse comportamento legado.
+
+Validação: `npm test` e `npm run check`. `test/shipping-campaigns.test.js` cobre
+descoberta por URL nova, datas, restrições, valores ambíguos, falhas e links externos.
+
 Uma rota serverless (Vercel) que lê o valor mínimo de frete grátis na vitrine da Natura
 e devolve texto plano, pronto para ser consumido por uma página no HostGator.
 
